@@ -1,0 +1,35 @@
+# .NET build outputs
+bin/
+obj/
+out/
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.sln.docstates
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile*
+.dockerignore
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp 

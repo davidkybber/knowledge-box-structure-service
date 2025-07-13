@@ -47,12 +47,6 @@ resource "azurerm_container_app" "structure_service" {
         value = "8080"
       }
 
-      # JWT Authentication settings
-      env {
-        name        = "Jwt__Key"
-        secret_name = "jwt-key"
-      }
-
       # CORS Configuration
       env {
         name  = "CORS_ALLOWED_ORIGINS"
@@ -73,11 +67,6 @@ resource "azurerm_container_app" "structure_service" {
       name  = "acr-password"
       value = data.azurerm_container_registry.acr[0].admin_password
     }
-  }
-
-  secret {
-    name  = "jwt-key"
-    value = data.azurerm_key_vault_secret.jwt_key.value
   }
 
   secret {
@@ -142,11 +131,6 @@ resource "azurerm_key_vault_access_policy" "container_app_access" {
 }
 
 # Reference existing Key Vault secrets
-data "azurerm_key_vault_secret" "jwt_key" {
-  name         = "jwt-key"
-  key_vault_id = data.azurerm_key_vault.key_vault.id
-}
-
 data "azurerm_key_vault_secret" "db_connection_string" {
   name         = "db-connection-string"
   key_vault_id = data.azurerm_key_vault.key_vault.id

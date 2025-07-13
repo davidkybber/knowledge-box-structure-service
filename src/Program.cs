@@ -7,6 +7,49 @@ using KnowledgeBox.Structure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        // Get CORS origins from environment variable first, then fall back to configuration
+        var corsOriginsEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+        string[] allowedOrigins;
+        
+        if (!string.IsNullOrEmpty(corsOriginsEnv))
+        {
+            allowedOrigins = corsOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                          .Select(origin => origin.Trim())
+                                          .ToArray();
+        }
+        else
+        {
+            allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "*" };
+        }
+        
+        var allowedMethods = builder.Configuration.GetSection("Cors:AllowedMethods").Get<string[]>() ?? new[] { "GET", "POST", "PUT", "DELETE", "OPTIONS" };
+        var allowedHeaders = builder.Configuration.GetSection("Cors:AllowedHeaders").Get<string[]>() ?? new[] { "*" };
+        var allowCredentials = builder.Configuration.GetValue<bool>("Cors:AllowCredentials");
+
+        if (allowedOrigins.Contains("*"))
+        {
+            policy.AllowAnyOrigin();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+
+        policy.WithMethods(allowedMethods)
+              .WithHeaders(allowedHeaders);
+
+        if (allowCredentials && !allowedOrigins.Contains("*"))
+        {
+            policy.AllowCredentials();
+        }
+    });
+});
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -47,44 +90,37 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<KnowledgeBoxContext>(options =>
     options.UseInMemoryDatabase("KnowledgeBoxDb"));
 
-// Add JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"] ?? "your-256-bit-secret-key-here-make-it-long-enough-for-security";
-var key = Encoding.ASCII.GetBytes(secretKey);
+// Add JWT Authentication (aligned with auth service)
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "This_Is_A_Security_Key_That_Should_Be_Changed_In_Production_And_Stored_Securely";
+var key = Encoding.UTF8.GetBytes(jwtKey);
 
-builder.Services.AddAuthentication(x =>
+builder.Services.AddAuthentication(options =>
 {
-    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(x =>
+.AddJwtBearer(options =>
 {
-    x.RequireHttpsMetadata = false;
-    x.SaveToken = true;
-    x.TokenValidationParameters = new TokenValidationParameters
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+        NameClaimType = "name"
     };
 });
 
 // Add services
 builder.Services.AddScoped<IKnowledgeBoxService, KnowledgeBoxService>();
 
-// Add CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
+// Remove duplicate CORS configuration - using the flexible one above
 
 var app = builder.Build();
 
@@ -96,8 +132,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
 
+// Add CORS middleware
+app.UseCors();
+
+// Add Authentication and Authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
 

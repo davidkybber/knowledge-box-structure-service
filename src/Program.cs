@@ -1,7 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using KnowledgeBox.Structure.Data;
 using KnowledgeBox.Structure.Services;
 
@@ -56,71 +53,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "KnowledgeBox API", Version = "v1" });
-    
-    // Add JWT authentication to Swagger
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-    
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            },
-            new List<string>()
-        }
-    });
 });
 
 // Add Entity Framework
 builder.Services.AddDbContext<KnowledgeBoxContext>(options =>
     options.UseInMemoryDatabase("KnowledgeBoxDb"));
 
-// Add JWT Authentication (aligned with auth service)
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "This_Is_A_Security_Key_That_Should_Be_Changed_In_Production_And_Stored_Securely";
-var key = Encoding.UTF8.GetBytes(jwtKey);
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero,
-        NameClaimType = "name"
-    };
-});
-
 // Add services
 builder.Services.AddScoped<IKnowledgeBoxService, KnowledgeBoxService>();
-
-// Remove duplicate CORS configuration - using the flexible one above
 
 var app = builder.Build();
 
@@ -135,10 +75,6 @@ app.UseHttpsRedirection();
 
 // Add CORS middleware
 app.UseCors();
-
-// Add Authentication and Authorization middleware
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapControllers();
 

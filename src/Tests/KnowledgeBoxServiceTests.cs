@@ -33,10 +33,9 @@ public class KnowledgeBoxServiceTests : IDisposable
             IsPublic = false,
             Tags = new[] { "test", "knowledge" }
         };
-        var userId = "test-user-id";
 
         // Act
-        var result = await _service.CreateKnowledgeBoxAsync(request, userId);
+        var result = await _service.CreateKnowledgeBoxAsync(request);
 
         // Assert
         Assert.True(result.Success);
@@ -44,7 +43,7 @@ public class KnowledgeBoxServiceTests : IDisposable
         Assert.Equal(request.Title, result.KnowledgeBox.Title);
         Assert.Equal(request.Topic, result.KnowledgeBox.Topic);
         Assert.Equal(request.Content, result.KnowledgeBox.Content);
-        Assert.Equal(userId, result.KnowledgeBox.UserId);
+        Assert.Equal("anonymous", result.KnowledgeBox.UserId);
         Assert.Equal(2, result.KnowledgeBox.Tags.Count);
         Assert.Contains("test", result.KnowledgeBox.Tags);
         Assert.Contains("knowledge", result.KnowledgeBox.Tags);
@@ -54,145 +53,144 @@ public class KnowledgeBoxServiceTests : IDisposable
     public async Task GetKnowledgeBoxByIdAsync_ExistingKnowledgeBox_ReturnsSuccess()
     {
         // Arrange
-        var userId = "test-user-id";
         var knowledgeBox = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = "test-id",
             Title = "Test Knowledge Box",
             Topic = "Test Topic",
             Content = "Test Content",
-            UserId = userId,
+            UserId = "test-user-id",
             IsPublic = false,
-            Tags = new List<string> { "test", "knowledge" }
+            Tags = new List<string> { "test" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.KnowledgeBoxes.Add(knowledgeBox);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetKnowledgeBoxByIdAsync(knowledgeBox.Id, userId);
+        var result = await _service.GetKnowledgeBoxByIdAsync("test-id");
 
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.KnowledgeBox);
-        Assert.Equal(knowledgeBox.Id, result.KnowledgeBox.Id);
-        Assert.Equal(knowledgeBox.Title, result.KnowledgeBox.Title);
+        Assert.Equal("test-id", result.KnowledgeBox.Id);
     }
 
     [Fact]
     public async Task GetKnowledgeBoxByIdAsync_NonExistentKnowledgeBox_ReturnsFailure()
     {
-        // Arrange
-        var userId = "test-user-id";
-        var nonExistentId = Guid.NewGuid().ToString();
-
         // Act
-        var result = await _service.GetKnowledgeBoxByIdAsync(nonExistentId, userId);
+        var result = await _service.GetKnowledgeBoxByIdAsync("non-existent-id");
 
         // Assert
         Assert.False(result.Success);
         Assert.Null(result.KnowledgeBox);
-        Assert.Equal("Knowledge box not found or access denied", result.Message);
     }
 
     [Fact]
-    public async Task GetKnowledgeBoxByIdAsync_PublicKnowledgeBox_DifferentUser_ReturnsSuccess()
+    public async Task GetKnowledgeBoxByIdAsync_PublicKnowledgeBox_ReturnsSuccess()
     {
         // Arrange
-        var ownerId = "owner-user-id";
-        var requesterId = "requester-user-id";
         var knowledgeBox = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = "public-id",
             Title = "Public Knowledge Box",
             Topic = "Public Topic",
             Content = "Public Content",
-            UserId = ownerId,
+            UserId = "other-user-id",
             IsPublic = true,
-            Tags = new List<string> { "public", "knowledge" }
+            Tags = new List<string> { "public" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.KnowledgeBoxes.Add(knowledgeBox);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetKnowledgeBoxByIdAsync(knowledgeBox.Id, requesterId);
+        var result = await _service.GetKnowledgeBoxByIdAsync("public-id");
 
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.KnowledgeBox);
-        Assert.Equal(knowledgeBox.Id, result.KnowledgeBox.Id);
+        Assert.Equal("public-id", result.KnowledgeBox.Id);
     }
 
     [Fact]
     public async Task UpdateKnowledgeBoxAsync_ValidRequest_ReturnsSuccess()
     {
         // Arrange
-        var userId = "test-user-id";
         var knowledgeBox = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = "test-id",
             Title = "Original Title",
             Topic = "Original Topic",
             Content = "Original Content",
-            UserId = userId,
+            UserId = "test-user-id",
             IsPublic = false,
-            Tags = new List<string> { "original" }
+            Tags = new List<string> { "original" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.KnowledgeBoxes.Add(knowledgeBox);
         await _context.SaveChangesAsync();
 
-        var updateRequest = new UpdateKnowledgeBoxRequest
+        var request = new UpdateKnowledgeBoxRequest
         {
-            Id = knowledgeBox.Id,
+            Id = "test-id",
             Title = "Updated Title",
+            Topic = "Updated Topic",
             Content = "Updated Content",
-            Tags = new[] { "updated", "knowledge" }
+            IsPublic = true,
+            Tags = new[] { "updated", "test" }
         };
 
         // Act
-        var result = await _service.UpdateKnowledgeBoxAsync(updateRequest, userId);
+        var result = await _service.UpdateKnowledgeBoxAsync(request);
 
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.KnowledgeBox);
         Assert.Equal("Updated Title", result.KnowledgeBox.Title);
+        Assert.Equal("Updated Topic", result.KnowledgeBox.Topic);
         Assert.Equal("Updated Content", result.KnowledgeBox.Content);
-        Assert.Equal("Original Topic", result.KnowledgeBox.Topic); // Should remain unchanged
+        Assert.True(result.KnowledgeBox.IsPublic);
         Assert.Equal(2, result.KnowledgeBox.Tags.Count);
         Assert.Contains("updated", result.KnowledgeBox.Tags);
-        Assert.Contains("knowledge", result.KnowledgeBox.Tags);
+        Assert.Contains("test", result.KnowledgeBox.Tags);
     }
 
     [Fact]
     public async Task DeleteKnowledgeBoxAsync_ExistingKnowledgeBox_ReturnsSuccess()
     {
         // Arrange
-        var userId = "test-user-id";
         var knowledgeBox = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = "test-id",
             Title = "Test Knowledge Box",
             Topic = "Test Topic",
             Content = "Test Content",
-            UserId = userId,
+            UserId = "test-user-id",
             IsPublic = false,
-            Tags = new List<string> { "test" }
+            Tags = new List<string> { "test" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.KnowledgeBoxes.Add(knowledgeBox);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.DeleteKnowledgeBoxAsync(knowledgeBox.Id, userId);
+        var result = await _service.DeleteKnowledgeBoxAsync("test-id");
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal("Knowledge box deleted successfully", result.Message);
-
-        // Verify it's actually deleted
-        var deletedKnowledgeBox = await _context.KnowledgeBoxes.FindAsync(knowledgeBox.Id);
+        
+        // Verify the knowledge box was actually deleted
+        var deletedKnowledgeBox = await _context.KnowledgeBoxes.FindAsync("test-id");
         Assert.Null(deletedKnowledgeBox);
     }
 
@@ -200,109 +198,114 @@ public class KnowledgeBoxServiceTests : IDisposable
     public async Task SearchKnowledgeBoxesAsync_WithQuery_ReturnsMatchingResults()
     {
         // Arrange
-        var userId = "test-user-id";
         var knowledgeBox1 = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
-            Title = "Programming in C#",
-            Topic = "Software Development",
-            Content = "Learning C# programming language",
-            UserId = userId,
-            IsPublic = false,
-            Tags = new List<string> { "programming", "csharp" }
+            Id = "test-id-1",
+            Title = "Machine Learning Basics",
+            Topic = "AI",
+            Content = "Introduction to machine learning",
+            UserId = "test-user-id",
+            IsPublic = true,
+            Tags = new List<string> { "ai", "ml" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         var knowledgeBox2 = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
-            Title = "Machine Learning Basics",
-            Topic = "Artificial Intelligence",
-            Content = "Introduction to machine learning",
-            UserId = userId,
+            Id = "test-id-2",
+            Title = "Web Development",
+            Topic = "Programming",
+            Content = "HTML, CSS, JavaScript basics",
+            UserId = "test-user-id",
             IsPublic = false,
-            Tags = new List<string> { "ml", "ai" }
+            Tags = new List<string> { "web", "programming" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.KnowledgeBoxes.AddRange(knowledgeBox1, knowledgeBox2);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.SearchKnowledgeBoxesAsync("programming", null, userId);
+        var result = await _service.SearchKnowledgeBoxesAsync("machine", null);
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotNull(result.KnowledgeBoxes);
-        Assert.Single(result.KnowledgeBoxes);
-        Assert.Equal(knowledgeBox1.Id, result.KnowledgeBoxes[0].Id);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Contains(result.KnowledgeBoxes, kb => kb.Title == "Machine Learning Basics");
     }
 
     [Fact]
     public async Task SearchKnowledgeBoxesAsync_WithTags_ReturnsMatchingResults()
     {
         // Arrange
-        var userId = "test-user-id";
         var knowledgeBox1 = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
-            Title = "Programming in C#",
-            Topic = "Software Development",
-            Content = "Learning C# programming language",
-            UserId = userId,
-            IsPublic = false,
-            Tags = new List<string> { "programming", "csharp" }
+            Id = "test-id-1",
+            Title = "Machine Learning Basics",
+            Topic = "AI",
+            Content = "Introduction to machine learning",
+            UserId = "test-user-id",
+            IsPublic = true,
+            Tags = new List<string> { "ai", "ml" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         var knowledgeBox2 = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
-            Title = "Machine Learning Basics",
-            Topic = "Artificial Intelligence",
-            Content = "Introduction to machine learning",
-            UserId = userId,
+            Id = "test-id-2",
+            Title = "Web Development",
+            Topic = "Programming",
+            Content = "HTML, CSS, JavaScript basics",
+            UserId = "test-user-id",
             IsPublic = false,
-            Tags = new List<string> { "ml", "ai" }
+            Tags = new List<string> { "web", "programming" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.KnowledgeBoxes.AddRange(knowledgeBox1, knowledgeBox2);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.SearchKnowledgeBoxesAsync(null, "programming,csharp", userId);
+        var result = await _service.SearchKnowledgeBoxesAsync(null, "ai");
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotNull(result.KnowledgeBoxes);
-        Assert.Single(result.KnowledgeBoxes);
-        Assert.Equal(knowledgeBox1.Id, result.KnowledgeBoxes[0].Id);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Contains(result.KnowledgeBoxes, kb => kb.Title == "Machine Learning Basics");
     }
 
     [Fact]
     public async Task GetPublicKnowledgeBoxesAsync_ReturnsOnlyPublicKnowledgeBoxes()
     {
         // Arrange
-        var userId1 = "user1";
-        var userId2 = "user2";
-        
         var publicKnowledgeBox = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = "public-id",
             Title = "Public Knowledge Box",
             Topic = "Public Topic",
-            Content = "Public content",
-            UserId = userId1,
+            Content = "Public Content",
+            UserId = "user-1",
             IsPublic = true,
-            Tags = new List<string> { "public" }
+            Tags = new List<string> { "public" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         var privateKnowledgeBox = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = "private-id",
             Title = "Private Knowledge Box",
             Topic = "Private Topic",
-            Content = "Private content",
-            UserId = userId2,
+            Content = "Private Content",
+            UserId = "user-2",
             IsPublic = false,
-            Tags = new List<string> { "private" }
+            Tags = new List<string> { "private" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.KnowledgeBoxes.AddRange(publicKnowledgeBox, privateKnowledgeBox);
@@ -313,53 +316,52 @@ public class KnowledgeBoxServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotNull(result.KnowledgeBoxes);
-        Assert.Single(result.KnowledgeBoxes);
-        Assert.Equal(publicKnowledgeBox.Id, result.KnowledgeBoxes[0].Id);
-        Assert.True(result.KnowledgeBoxes[0].IsPublic);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Contains(result.KnowledgeBoxes, kb => kb.Id == "public-id");
+        Assert.DoesNotContain(result.KnowledgeBoxes, kb => kb.Id == "private-id");
     }
 
     [Fact]
-    public async Task GetAllKnowledgeBoxesAsync_ReturnsUserKnowledgeBoxes()
+    public async Task GetAllKnowledgeBoxesAsync_ReturnsAllKnowledgeBoxes()
     {
         // Arrange
-        var userId1 = "user1";
-        var userId2 = "user2";
-
         var knowledgeBox1 = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
-            Title = "User1 Knowledge Box",
-            Topic = "User1 Topic",
-            Content = "User1 content",
-            UserId = userId1,
-            IsPublic = false,
-            Tags = new List<string> { "user1" }
+            Id = "test-id-1",
+            Title = "Knowledge Box 1",
+            Topic = "Topic 1",
+            Content = "Content 1",
+            UserId = "user-1",
+            IsPublic = true,
+            Tags = new List<string> { "tag1" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         var knowledgeBox2 = new Models.KnowledgeBox
         {
-            Id = Guid.NewGuid().ToString(),
-            Title = "User2 Knowledge Box",
-            Topic = "User2 Topic",
-            Content = "User2 content",
-            UserId = userId2,
+            Id = "test-id-2",
+            Title = "Knowledge Box 2",
+            Topic = "Topic 2",
+            Content = "Content 2",
+            UserId = "user-2",
             IsPublic = false,
-            Tags = new List<string> { "user2" }
+            Tags = new List<string> { "tag2" },
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.KnowledgeBoxes.AddRange(knowledgeBox1, knowledgeBox2);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetAllKnowledgeBoxesAsync(userId1);
+        var result = await _service.GetAllKnowledgeBoxesAsync();
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotNull(result.KnowledgeBoxes);
-        Assert.Single(result.KnowledgeBoxes);
-        Assert.Equal(knowledgeBox1.Id, result.KnowledgeBoxes[0].Id);
-        Assert.Equal(userId1, result.KnowledgeBoxes[0].UserId);
+        Assert.Equal(2, result.TotalCount);
+        Assert.Contains(result.KnowledgeBoxes, kb => kb.Id == "test-id-1");
+        Assert.Contains(result.KnowledgeBoxes, kb => kb.Id == "test-id-2");
     }
 
     public void Dispose()

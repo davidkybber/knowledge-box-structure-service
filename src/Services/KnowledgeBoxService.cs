@@ -13,12 +13,11 @@ public class KnowledgeBoxService : IKnowledgeBoxService
         _context = context;
     }
 
-    public async Task<KnowledgeBoxListResponse> GetAllKnowledgeBoxesAsync(string userId)
+    public async Task<KnowledgeBoxListResponse> GetAllKnowledgeBoxesAsync()
     {
         try
         {
             var knowledgeBoxes = await _context.KnowledgeBoxes
-                .Where(kb => kb.UserId == userId)
                 .OrderByDescending(kb => kb.UpdatedAt)
                 .ToListAsync();
 
@@ -39,19 +38,19 @@ public class KnowledgeBoxService : IKnowledgeBoxService
         }
     }
 
-    public async Task<KnowledgeBoxResponse> GetKnowledgeBoxByIdAsync(string id, string userId)
+    public async Task<KnowledgeBoxResponse> GetKnowledgeBoxByIdAsync(string id)
     {
         try
         {
             var knowledgeBox = await _context.KnowledgeBoxes
-                .FirstOrDefaultAsync(kb => kb.Id == id && (kb.UserId == userId || kb.IsPublic));
+                .FirstOrDefaultAsync(kb => kb.Id == id);
 
             if (knowledgeBox == null)
             {
                 return new KnowledgeBoxResponse
                 {
                     Success = false,
-                    Message = "Knowledge box not found or access denied"
+                    Message = "Knowledge box not found"
                 };
             }
 
@@ -71,7 +70,7 @@ public class KnowledgeBoxService : IKnowledgeBoxService
         }
     }
 
-    public async Task<KnowledgeBoxResponse> CreateKnowledgeBoxAsync(CreateKnowledgeBoxRequest request, string userId)
+    public async Task<KnowledgeBoxResponse> CreateKnowledgeBoxAsync(CreateKnowledgeBoxRequest request)
     {
         try
         {
@@ -81,7 +80,7 @@ public class KnowledgeBoxService : IKnowledgeBoxService
                 Title = request.Title,
                 Topic = request.Topic,
                 Content = request.Content ?? string.Empty,
-                UserId = userId,
+                UserId = "anonymous", // Default user ID since no authentication
                 IsPublic = request.IsPublic ?? false,
                 Tags = request.Tags?.ToList() ?? new List<string>(),
                 CreatedAt = DateTime.UtcNow,
@@ -115,19 +114,19 @@ public class KnowledgeBoxService : IKnowledgeBoxService
         }
     }
 
-    public async Task<KnowledgeBoxResponse> UpdateKnowledgeBoxAsync(UpdateKnowledgeBoxRequest request, string userId)
+    public async Task<KnowledgeBoxResponse> UpdateKnowledgeBoxAsync(UpdateKnowledgeBoxRequest request)
     {
         try
         {
             var knowledgeBox = await _context.KnowledgeBoxes
-                .FirstOrDefaultAsync(kb => kb.Id == request.Id && kb.UserId == userId);
+                .FirstOrDefaultAsync(kb => kb.Id == request.Id);
 
             if (knowledgeBox == null)
             {
                 return new KnowledgeBoxResponse
                 {
                     Success = false,
-                    Message = "Knowledge box not found or access denied"
+                    Message = "Knowledge box not found"
                 };
             }
 
@@ -174,19 +173,19 @@ public class KnowledgeBoxService : IKnowledgeBoxService
         }
     }
 
-    public async Task<DeleteKnowledgeBoxResponse> DeleteKnowledgeBoxAsync(string id, string userId)
+    public async Task<DeleteKnowledgeBoxResponse> DeleteKnowledgeBoxAsync(string id)
     {
         try
         {
             var knowledgeBox = await _context.KnowledgeBoxes
-                .FirstOrDefaultAsync(kb => kb.Id == id && kb.UserId == userId);
+                .FirstOrDefaultAsync(kb => kb.Id == id);
 
             if (knowledgeBox == null)
             {
                 return new DeleteKnowledgeBoxResponse
                 {
                     Success = false,
-                    Message = "Knowledge box not found or access denied"
+                    Message = "Knowledge box not found"
                 };
             }
 
@@ -209,12 +208,11 @@ public class KnowledgeBoxService : IKnowledgeBoxService
         }
     }
 
-    public async Task<KnowledgeBoxListResponse> SearchKnowledgeBoxesAsync(string? query, string? tags, string userId)
+    public async Task<KnowledgeBoxListResponse> SearchKnowledgeBoxesAsync(string? query, string? tags)
     {
         try
         {
-            var knowledgeBoxesQuery = _context.KnowledgeBoxes
-                .Where(kb => kb.UserId == userId || kb.IsPublic);
+            var knowledgeBoxesQuery = _context.KnowledgeBoxes.AsQueryable();
 
             // Apply text search if query is provided
             if (!string.IsNullOrEmpty(query))

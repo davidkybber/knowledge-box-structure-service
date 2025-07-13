@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using KnowledgeBox.Structure.Models;
 using KnowledgeBox.Structure.Services;
 
@@ -8,7 +6,6 @@ namespace KnowledgeBox.Structure.Controllers;
 
 [ApiController]
 [Route("knowledgeboxes")]
-[Authorize]
 public class KnowledgeBoxController : ControllerBase
 {
     private readonly IKnowledgeBoxService _knowledgeBoxService;
@@ -18,33 +15,20 @@ public class KnowledgeBoxController : ControllerBase
         _knowledgeBoxService = knowledgeBoxService;
     }
 
-    private string GetCurrentUserId()
-    {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? 
-               User.FindFirst("sub")?.Value ?? 
-               User.FindFirst("user_id")?.Value ?? 
-               throw new UnauthorizedAccessException("User ID not found in token");
-    }
-
     /// <summary>
-    /// Get all knowledge boxes for the authenticated user
+    /// Get all knowledge boxes
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<KnowledgeBoxListResponse>> GetAllKnowledgeBoxes()
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var result = await _knowledgeBoxService.GetAllKnowledgeBoxesAsync(userId);
+            var result = await _knowledgeBoxService.GetAllKnowledgeBoxesAsync();
             
             if (result.Success)
                 return Ok(result);
             
             return BadRequest(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new ErrorResponse { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -60,17 +44,12 @@ public class KnowledgeBoxController : ControllerBase
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var result = await _knowledgeBoxService.GetKnowledgeBoxByIdAsync(id, userId);
+            var result = await _knowledgeBoxService.GetKnowledgeBoxByIdAsync(id);
             
             if (result.Success)
                 return Ok(result);
             
             return NotFound(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new ErrorResponse { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -95,17 +74,12 @@ public class KnowledgeBoxController : ControllerBase
                 });
             }
 
-            var userId = GetCurrentUserId();
-            var result = await _knowledgeBoxService.CreateKnowledgeBoxAsync(request, userId);
+            var result = await _knowledgeBoxService.CreateKnowledgeBoxAsync(request);
             
             if (result.Success)
                 return CreatedAtAction(nameof(GetKnowledgeBoxById), new { id = result.KnowledgeBox!.Id }, result);
             
             return BadRequest(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new ErrorResponse { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -133,17 +107,12 @@ public class KnowledgeBoxController : ControllerBase
             // Ensure the ID in the URL matches the ID in the request body
             request.Id = id;
 
-            var userId = GetCurrentUserId();
-            var result = await _knowledgeBoxService.UpdateKnowledgeBoxAsync(request, userId);
+            var result = await _knowledgeBoxService.UpdateKnowledgeBoxAsync(request);
             
             if (result.Success)
                 return Ok(result);
             
             return NotFound(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new ErrorResponse { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -159,17 +128,12 @@ public class KnowledgeBoxController : ControllerBase
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var result = await _knowledgeBoxService.DeleteKnowledgeBoxAsync(id, userId);
+            var result = await _knowledgeBoxService.DeleteKnowledgeBoxAsync(id);
             
             if (result.Success)
                 return Ok(result);
             
             return NotFound(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new ErrorResponse { Message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -185,17 +149,12 @@ public class KnowledgeBoxController : ControllerBase
     {
         try
         {
-            var userId = GetCurrentUserId();
-            var result = await _knowledgeBoxService.SearchKnowledgeBoxesAsync(query, tags, userId);
+            var result = await _knowledgeBoxService.SearchKnowledgeBoxesAsync(query, tags);
             
             if (result.Success)
                 return Ok(result);
             
             return BadRequest(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new ErrorResponse { Message = ex.Message });
         }
         catch (Exception ex)
         {

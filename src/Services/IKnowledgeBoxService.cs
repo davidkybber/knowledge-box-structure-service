@@ -4,11 +4,11 @@ namespace KnowledgeBox.Structure.Services;
 
 public interface IKnowledgeBoxService
 {
-    Task<KnowledgeBoxListResponse> GetAllKnowledgeBoxesAsync(string userId);
-    Task<KnowledgeBoxResponse> GetKnowledgeBoxByIdAsync(string id, string userId);
-    Task<KnowledgeBoxResponse> CreateKnowledgeBoxAsync(CreateKnowledgeBoxRequest request, string userId);
-    Task<KnowledgeBoxResponse> UpdateKnowledgeBoxAsync(UpdateKnowledgeBoxRequest request, string userId);
-    Task<DeleteKnowledgeBoxResponse> DeleteKnowledgeBoxAsync(string id, string userId);
-    Task<KnowledgeBoxListResponse> SearchKnowledgeBoxesAsync(string? query, string? tags, string userId);
+    Task<KnowledgeBoxListResponse> GetAllKnowledgeBoxesAsync();
+    Task<KnowledgeBoxResponse> GetKnowledgeBoxByIdAsync(string id);
+    Task<KnowledgeBoxResponse> CreateKnowledgeBoxAsync(CreateKnowledgeBoxRequest request);
+    Task<KnowledgeBoxResponse> UpdateKnowledgeBoxAsync(UpdateKnowledgeBoxRequest request);
+    Task<DeleteKnowledgeBoxResponse> DeleteKnowledgeBoxAsync(string id);
+    Task<KnowledgeBoxListResponse> SearchKnowledgeBoxesAsync(string? query, string? tags);
     Task<KnowledgeBoxListResponse> GetPublicKnowledgeBoxesAsync();
 }
